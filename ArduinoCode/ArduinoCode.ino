@@ -171,7 +171,7 @@ void loop() {
     ElecData[hour * 2 + minut/30] = ElectroOn();
   }
   //////////////ЭКСТРА_РЕЖИМ./////////////////////////////////////////////////////////////////
-  if (mode == 0 && minut == 30) {
+  if (mode == 0 && minut == 0) {
     int a, i = 0;
     if (hour * 2 + minut/30 >= 11) a = hour * 2 + minut/30 - 11;
     else a = 48 + hour * 2 + minut/30 - 11;
@@ -179,11 +179,11 @@ void loop() {
     for (int j = -11; j< -5; j++){
       if (not ElecData[a]){
         strcpy(sendtext2, sendtext1);
-        sprintf (sendtext1, "%s%s", sendtext2, "!");
+        sprintf(sendtext1, "%s%s", sendtext2, "!");
       }
         else{
         strcpy(sendtext2, sendtext1);
-        sprintf (sendtext1, "%s%s", sendtext2, "!");
+        sprintf(sendtext1, "%s%s", sendtext2, " ");
       }
       dtostrf(TempData[a], 4, 2, TempForTemp);
       sprintf(part, "%02d:%02d  %s\n",a/2, a%2*30, TempForTemp);
@@ -194,15 +194,15 @@ void loop() {
     }
     gprs.sendSMS(PhoneNumb, sendtext1);
     delay(2000);
-    sprintf (sendtext2, "");
+    sprintf(sendtext2, "");
     for (int j = -5; j<= 0; j++){
       if (not ElecData[a]){
-        strcpy(sendtext2, sendtext1);
-        sprintf (sendtext2, "%s%s", sendtext1, "!");
+        strcpy(sendtext1, sendtext2);
+        sprintf(sendtext2, "%s%s", sendtext1, "!");
       }
         else{
-        strcpy(sendtext2, sendtext1);
-        sprintf (sendtext2, "%s%s", sendtext1, "!");
+        strcpy(sendtext1, sendtext2);
+        sprintf(sendtext2, "%s%s", sendtext1, " ");
       }
       dtostrf(TempData[a], 4, 2, TempForTemp);
       sprintf(part, "%02d:%02d  %s\n",a/2, a%2*30, TempForTemp);
@@ -222,35 +222,35 @@ void loop() {
     for (int j = -11; j< -5; j++){
       if (not ElecData[a]){
         strcpy(sendtext2, sendtext1);
-        sprintf (sendtext1, "%s%s", sendtext2, "!");
+        sprintf(sendtext1, "%s%s", sendtext2, "!");
       }
         else{
         strcpy(sendtext2, sendtext1);
-        sprintf (sendtext1, "%s%s", sendtext2, "!");
+        sprintf(sendtext1, "%s%s", sendtext2, " ");
       }
       dtostrf(TempData[a], 4, 2, TempForTemp);
-      sprintf (part, "%02d:%02d  %s\n",a/2, a%2*30, TempForTemp);
+      sprintf(part, "%02d:%02d  %s\n",a/2, a%2*30, TempForTemp);
       strcpy(sendtext2, sendtext1);
-      sprintf (sendtext1, "%s%s", sendtext2, part);
+      sprintf(sendtext1, "%s%s", sendtext2, part);
       a += 2;
       if (a > 47) a-=48;
     }
     gprs.sendSMS(PhoneNumb, sendtext1);
     delay(2000);
-    sprintf (sendtext2, "");
+    sprintf(sendtext2, "");
     for (int j = -5; j<= 0; j++){
       if (not ElecData[a]){
-        strcpy(sendtext2, sendtext1);
-        sprintf (sendtext2, "%s%s", sendtext1, "!");
+        strcpy(sendtext1, sendtext2);
+        sprintf(sendtext2, "%s%s", sendtext1, "!");
       }
         else{
-        strcpy(sendtext2, sendtext1);
-        sprintf (sendtext2, "%s%s", sendtext1, "!");
+        strcpy(sendtext1, sendtext2);
+        sprintf(sendtext2, "%s%s", sendtext1, " ");
       }
       dtostrf(TempData[a], 4, 2, TempForTemp);
-      sprintf (part, "%02d:%02d  %s\n",a/2, a%2*30, TempForTemp);
+      sprintf(part, "%02d:%02d  %s\n",a/2, a%2*30, TempForTemp);
       strcpy(sendtext1, sendtext2);
-      sprintf (sendtext2, "%s%s", sendtext1, part);
+      sprintf(sendtext2, "%s%s", sendtext1, part);
       a += 2;
       if (a > 47) a-=48;
     }
