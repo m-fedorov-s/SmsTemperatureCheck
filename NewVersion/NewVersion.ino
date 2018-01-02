@@ -46,20 +46,31 @@ void setup() {
   pinMode(8, INPUT);
   // инициализация часов
   clock.begin();
+
+  Serial.begin(9600); //!!!
+  while (!Serial) {    
+  }
+  
   SmsSerial.begin(9600);
+
+////////////////
+  Serial.println("starting...");
+  
   gprs.powerOn();
-  digitalWrite(13, HIGH);
   while (!gprs.init()) {
     // если связи нет, ждём 1 секунду
     // и выводим сообщение об ошибке
     // процесс повторяется в цикле
     // пока не появится ответ от GPRS устройства
     delay(1000);
+    Serial.println("can't init gprs...");
   }
-  Serial.begin(9600);
-  digitalWrite(13, LOW);
-  digitalWrite(12, HIGH);
-  gprs.sendSMS(PhoneNumb, "Device is on");
+  Serial.print("ready to send sms...");
+  gprs.sendSMS(PhoneNumb, "device is on!!!");
+  Serial.println("sms sent!");
+/////////////////
+
+  SendSms("Device is on");
 }
 
 //------------------------------------------------------------------------------------------
@@ -127,10 +138,40 @@ float GetTemper() {
 }
 //---------------------------------------------------------------------------------------
 
+void power_on_gprs()
+{
+  gprs.powerOn();
+  while (!gprs.init()) {
+    // если связи нет, ждём 1 секунду
+    // и выводим сообщение об ошибке
+    // процесс повторяется в цикле
+    // пока не появится ответ от GPRS устройства
+    delay(1000);
+  }    
+}
+
+void power_off_gprs()
+{
+  gprs.powerOff();
+  while ( gprs.checkPowerUp() ) {
+    gprs.powerOff();
+    delay(1000);
+  }
+}
+
 void SendSms(char* text)
 {
+  power_on_gprs();
+  SendSms_if_power_on(text);
+  power_off_gprs();
+}
+
+//  отправляет смс, не включая и не выключая gprs модуль
+void SendSms_if_power_on(char* text)
+{
+  //assert( gprs.checkPowerUp() );
   gprs.sendSMS(PhoneNumb, text);
-  //Log(text);
+  delay(10000);
 }
 
 void Log(char* text)
@@ -204,24 +245,26 @@ void report_half(int start_index, int step)
       dest = add_endline(dest);
     }
   }
-  SendSms(sms_buffer);
+  SendSms_if_power_on(sms_buffer);
   delay(2000);
 }
 
 //  создает два отчета за 24 отсчета времени с интервалом 30 минут, и отсылает 2 смс
 void report_30_all(int start_index) 
 {
+  power_on_gprs();
   report_half(start_index, 1);
-  delay(10000);
   report_half((start_index + 6) % history_size, 1);
+  power_off_gprs();
 }
 
 //  создает два отчета за 24 отсчета времени с интервалом 60 минут, и отсылает 2 смс
 void report_60_all(int start_index) 
 {
+  power_on_gprs();
   report_half(start_index, 2);
-  delay(10000);
   report_half((start_index + 12) % history_size, 2);
+  power_off_gprs();
 }
 
 //  добавляет свежие данные измерений. Если данные с таким временем уже были добавлены прямо перед этим,
