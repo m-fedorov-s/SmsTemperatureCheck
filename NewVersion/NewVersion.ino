@@ -7,6 +7,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <avr/sleep.h>
+#include <avr/wdt.h>
+
 
 #define _LOG
 #define PhoneNumb "+79104677537"
@@ -47,30 +50,15 @@ void setup() {
   // инициализация часов
   clock.begin();
 
-  Serial.begin(9600); //!!!
+  // инициализация порта для мониторинга
+  Serial.begin(9600);
   while (!Serial) {    
   }
   
+  // инициализация порта для gprs shield
   SmsSerial.begin(9600);
 
-////////////////
-  Serial.println("starting...");
-  
-  gprs.powerOn();
-  while (!gprs.init()) {
-    // если связи нет, ждём 1 секунду
-    // и выводим сообщение об ошибке
-    // процесс повторяется в цикле
-    // пока не появится ответ от GPRS устройства
-    delay(1000);
-    Serial.println("can't init gprs...");
-  }
-  Serial.print("ready to send sms...");
-  gprs.sendSMS(PhoneNumb, "device is on!!!");
-  Serial.println("sms sent!");
-/////////////////
-
-  SendSms("Device is on");
+  send_sms_power_on("Device is on");
 }
 
 //------------------------------------------------------------------------------------------
@@ -159,15 +147,17 @@ void power_off_gprs()
   }
 }
 
-void SendSms(char* text)
+//	включение gprs shield, отправка смс, и выключение
+void send_sms_power_on(char* text)
 {
   power_on_gprs();
-  SendSms_if_power_on(text);
+  send_sms(text);
   power_off_gprs();
 }
 
-//  отправляет смс, не включая и не выключая gprs модуль
-void SendSms_if_power_on(char* text)
+//  отправляет смс, никак не управляя питанием gprs модуля
+//	после отправки смс делается пауза в 10 секунд
+void send_sms(char* text)
 {
   //assert( gprs.checkPowerUp() );
   gprs.sendSMS(PhoneNumb, text);
@@ -245,8 +235,7 @@ void report_half(int start_index, int step)
       dest = add_endline(dest);
     }
   }
-  SendSms_if_power_on(sms_buffer);
-  delay(2000);
+  send_sms(sms_buffer);
 }
 
 //  создает два отчета за 24 отсчета времени с интервалом 30 минут, и отсылает 2 смс
@@ -281,6 +270,40 @@ bool add_new_data(int hours, int minutes, float temperature, bool is_electricity
   return true;
 }
 
+// watchdog interrupt
+ISR (WDT_vect) 
+{
+	wdt_disable();  // disable watchdog
+}  // end of WDT_vect
+
+//	глуюокий сон для энергосбережения, длительностью 8 секунд
+void delay_power_off()
+{
+	// disable ADC
+	ADCSRA = 0;  
+
+	// clear various "reset" flags
+	MCUSR = 0;     
+	// allow changes, disable reset
+	WDTCSR = bit (WDCE) | bit (WDE);
+	// set interrupt mode and an interval 
+	WDTCSR = bit (WDIE) | bit (WDP3) | bit (WDP0);    // set WDIE, and 8 seconds delay
+	wdt_reset();  // pat the dog
+
+	set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
+	noInterrupts ();           // timed sequence follows
+	sleep_enable();
+
+	// turn off brown-out enable in software
+	MCUCR = bit (BODS) | bit (BODSE);
+	MCUCR = bit (BODS); 
+	interrupts ();             // guarantees next instruction executed
+	sleep_cpu ();  
+
+	// cancel sleep as a precaution
+	sleep_disable();
+}
+
 void loop() {
   //  получаем текущие значения температуры, времени и наличия напряжения
   const float temperature = GetTemper();
@@ -290,12 +313,12 @@ void loop() {
 
   if (is_electricity_on && currentMode == Mode_OutOfElectricity) {
     currentMode = Mode_Normal;
-    SendSms("Electricity is on");
+	send_sms_power_on("Electricity is on");
   }
 
   if (!is_electricity_on && currentMode == Mode_Normal) {
     currentMode = Mode_OutOfElectricity;
-    SendSms("Electricity is off!");
+	send_sms_power_on("Electricity is off!");
   }
 
   if (minutes % 30 == 0) {
@@ -312,7 +335,8 @@ void loop() {
       }
     }
   }
-  delay(35000);
-  digitalWrite(12, LOW);
+
+  //	глубокий сон на 8 секунд, для энергосбережения
+  delay_power_off();
 }
 
